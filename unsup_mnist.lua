@@ -139,7 +139,7 @@ de = image.toDisplayTensor{input=eweight,
                            padding=2,
                            nrow=math.floor(math.sqrt(1024)),
                            symmetric=true}
-
+-- nothing
 if itorch then
   print('Decoder filters')
   itorch.image(dd)
