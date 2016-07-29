@@ -1,69 +1,83 @@
-require 'torch'
-require 'nn'
-require 'optim'
-require 'image'
+local torch = require 'torch'
+local optim = require 'optim'
+local image = require 'image'
 local cuda = pcall(require, 'cutorch')
 local mnist = require 'mnist'
-local AE = require 'model'
 
-local Xtrain = mnist.traindataset()
-local Xtest = mnist.testdataset()
+print('Setting up')
+torch.setheaptracking(true)
+torch.setdefaulttensortype('torch.FloatTensor')
+torch.manualSeed(1)
+if cuda then
+  require 'cunn'
+  cutorch.manualSeed(torch.random())
+end
 
-testset = Xtest.data:double():div(255)
+local testset = mnist.testdataset().data:float():div(255)
 
-trainset = Xtrain.data[{{1, 50000}}]:double():div(255)
+local trainset = mnist.traindataset().data[{{1, 50000}}]:float():div(255)
 
-validationset = Xtrain.data[{{50001, 60000}}]:double():div(255)
+local validationset = mnist.traindataset().data[{{50001, 60000}}]:float():div(255)
 
 local Ntrain = trainset:size(1)
 local Ntest = testset:size(1)
 local Nvalid = validationset:size(1)
 
-AE:createAutoencoder(trainset)
-local model = AE.autoencoder
-
-criterion = nn.BCECriterion()
-
 if cuda then
   trainset = trainset:cuda()
   validationset = validationset:cuda()
+end
+
+print(type(trainset))
+print(trainset:size())
+
+local AE = require 'model'
+AE:createAutoencoder(trainset)
+local model = AE.autoencoder
+
+if cuda then
   model:cuda()
+end
+
+local criterion = nn.BCECriterion()
+
+if cuda then
   criterion:cuda()
 end
 
-sgd_params = {
+local sgd_params = {
   learningRate = 1e-1
 }
 
-x, dl_dx = model:getParameters()
+theta, dl_dx = model:getParameters()
+
+local x
+
+local feval = function(params)
+  if theta ~= params then theta:copy(params) end
+  dl_dx:zero()
+
+  local Xhat = model:forward(x)
+  local loss = criterion:forward(Xhat, x)
+  local gradLoss = criterion:backward(Xhat, x)
+  model:backward(x, gradLoss)
+
+  return loss, dl_dx
+end
+
+local __, loss
 
 step = function(batch_size)
   local current_loss = 0
   local count = 0
-  local shuffle = torch.randperm(Ntrain)
   batch_size = batch_size or 200
 
   for t = 1, Ntrain, batch_size do
-    local size = math.min(t + batch_size - 1, Ntrain) - t
-    local inputs = torch.Tensor(size, 28, 28)
-    for i = 1,size do
-      local input = trainset[shuffle[i+t]]
-      inputs[i] = input
-    end
+    x = trainset:narrow(1, t, batch_size)
 
-    local feval = function(x_new)
-      if x ~= x_new then x:copy(x_new) end
-      dl_dx:zero()
-
-      local loss = criterion:forward(model:forward(inputs), inputs)
-      model:backward(inputs, criterion:backward(model.output, inputs))
-
-      return loss, dl_dx
-    end
-
-    _, fs = optim.sgd(feval, x, sgd_params)
+    __, loss = optim.sgd(feval, theta, sgd_params)
     count = count + 1
-    current_loss = current_loss + fs[1]
+    current_loss = current_loss + loss[1]
   end
 
   return current_loss / count
@@ -71,19 +85,19 @@ end
 
 
 eval = function(batch_size)
-  local loss = 0
   local count = 0
+  local l = 0
   batch_size = batch_size or 200
 
   for i = 1, Nvalid, batch_size do
-    local size = math.min(i + batch_size - 1, Nvalid) - i
-    local inputs = validationset[{{i, i + size - 1}}]
-    local current_loss = criterion:forward(model:forward(inputs), inputs)
-    loss = loss + current_loss
+    x = validationset:narrow(1, i, batch_size)
+    local Xhat = model:forward(x)
+    local current_loss = criterion:forward(Xhat, x)
+    l = l + current_loss
     count = count + 1
   end
 
-  return loss / count
+  return l / count
 end
 
 max_iters = 5
