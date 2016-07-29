@@ -1,7 +1,10 @@
 require 'torch'
 require 'nn'
 require 'optim'
+require 'image'
+local cuda = pcall(require, 'cutorch')
 local mnist = require 'mnist'
+local AE = require 'model'
 
 local Xtrain = mnist.traindataset()
 local testset = mnist.testdataset()
@@ -18,15 +21,17 @@ validationset = {
   data = Xtrain.data[{{50001, 60000}}]:double():div(255)
 }
 
-model = nn.Sequential()
-model:add(nn.View(-1, 28*28))
-model:add(nn.Linear(28*28, 1024))
-model:add(nn.ReLU(true))
---model:add(nn.L1Penalty(1e-5))
-model:add(nn.Linear(1024, 28*28))
-model:add(nn.Sigmoid(true))
+AE:createAutoencoder(trainset.data)
+local model = AE.autoencoder
 
 criterion = nn.BCECriterion()
+
+if cuda then
+  trainset = trainset:cuda()
+  validationset = validationset:cuda()
+  model:cuda()
+  criterion:cuda()
+end
 
 sgd_params = {
   learningRate = 1e-1
@@ -83,7 +88,7 @@ eval = function(dataset, batch_size)
   return loss / count
 end
 
-max_iters = 30
+max_iters = 5
 
 train = function()
   local last_error = 0
@@ -107,7 +112,7 @@ end
 -- saving model
 local path = require 'paths'
 modelName = 'unsup_mnist.net'
-filename = '/Users/art/torch_projects/first_project/' .. modelName
+filename = '/Users/art/torch_projects/unsup_project/' .. modelName
 
 if path.filep(filename) then
   print("Model exists!")
@@ -124,8 +129,8 @@ end
 
 -- print(model:get(2).weight[{{}, {60, 70}}]:size())
 
-eweight = model:get(2).weight
-dweight = model:get(4).weight
+eweight = model:get(1):get(2).weight
+dweight = model:get(2):get(1).weight
 -- print(eweight:transpose(1,2):unfold(2,32,32):size())
 dweight = dweight:transpose(1,2):unfold(2,28,28)
 eweight = eweight:unfold(2,28,28)
@@ -133,13 +138,12 @@ print(dweight:size())
 print(eweight:size())
 dd = image.toDisplayTensor{input=dweight,
                            padding=2,
-                           nrow=math.floor(math.sqrt(1024)),
+                           nrow=math.floor(math.sqrt(28*28)),
                            symmetric=true}
 de = image.toDisplayTensor{input=eweight,
                            padding=2,
-                           nrow=math.floor(math.sqrt(1024)),
+                           nrow=math.floor(math.sqrt(28*28)),
                            symmetric=true}
--- nothing
 if itorch then
   print('Decoder filters')
   itorch.image(dd)
@@ -148,6 +152,8 @@ if itorch then
 else
   print('run in itorch for visualization')
 end
+
+print(path.cwd())
 
 image.save(path.cwd() .. '/filters_dec.jpg', dd)
 image.save(path.cwd() .. '/filters_enc.jpg', de)
