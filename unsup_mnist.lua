@@ -123,8 +123,8 @@ end
 
 -- saving model
 local path = require 'paths'
-modelName = 'unsup_mnist.net'
-filename = '/Users/art/torch_projects/unsup_project/' .. modelName
+modelName = '/unsup_mnist.net'
+filename = path.cwd() .. modelName
 
 if path.filep(filename) then
   print("Model exists!")
