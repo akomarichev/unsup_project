@@ -7,21 +7,19 @@ local mnist = require 'mnist'
 local AE = require 'model'
 
 local Xtrain = mnist.traindataset()
-local testset = mnist.testdataset()
+local Xtest = mnist.testdataset()
 
-testset.data = testset.data:double():div(255)
+testset = Xtest.data:double():div(255)
 
-trainset = {
-  size = 50000,
-  data = Xtrain.data[{{1, 50000}}]:double():div(255)
-}
+trainset = Xtrain.data[{{1, 50000}}]:double():div(255)
 
-validationset = {
-  size = 10000,
-  data = Xtrain.data[{{50001, 60000}}]:double():div(255)
-}
+validationset = Xtrain.data[{{50001, 60000}}]:double():div(255)
 
-AE:createAutoencoder(trainset.data)
+local Ntrain = trainset:size(1)
+local Ntest = testset:size(1)
+local Nvalid = validationset:size(1)
+
+AE:createAutoencoder(trainset)
 local model = AE.autoencoder
 
 criterion = nn.BCECriterion()
@@ -42,14 +40,14 @@ x, dl_dx = model:getParameters()
 step = function(batch_size)
   local current_loss = 0
   local count = 0
-  local shuffle = torch.randperm(trainset.size)
+  local shuffle = torch.randperm(Ntrain)
   batch_size = batch_size or 200
 
-  for t = 1, trainset.size, batch_size do
-    local size = math.min(t + batch_size - 1, trainset.size) - t
+  for t = 1, Ntrain, batch_size do
+    local size = math.min(t + batch_size - 1, Ntrain) - t
     local inputs = torch.Tensor(size, 28, 28)
     for i = 1,size do
-      local input = trainset.data[shuffle[i+t]]
+      local input = trainset[shuffle[i+t]]
       inputs[i] = input
     end
 
@@ -72,14 +70,14 @@ step = function(batch_size)
 end
 
 
-eval = function(dataset, batch_size)
+eval = function(batch_size)
   local loss = 0
   local count = 0
   batch_size = batch_size or 200
 
-  for i = 1, dataset.size, batch_size do
-    local size = math.min(i + batch_size - 1, dataset.size) - i
-    local inputs = dataset.data[{{i, i + size - 1}}]
+  for i = 1, Nvalid, batch_size do
+    local size = math.min(i + batch_size - 1, Nvalid) - i
+    local inputs = validationset[{{i, i + size - 1}}]
     local current_loss = criterion:forward(model:forward(inputs), inputs)
     loss = loss + current_loss
     count = count + 1
@@ -97,7 +95,7 @@ train = function()
   for i = 1, max_iters do
     local loss = step()
     print(string.format('Epoch: %d current loss: %4f', i, loss))
-    local error = eval(validationset)
+    local error = eval()
     print(string.format('Error on the validation set: %4f', error))
     if error > last_error then
       if increasing > threshold then break end
