@@ -3,6 +3,11 @@ local optim = require 'optim'
 local image = require 'image'
 local cuda = pcall(require, 'cutorch')
 local mnist = require 'mnist'
+local path = require 'paths'
+
+print(path.cwd())
+
+SPARSITY = 25
 
 print('Setting up')
 torch.setheaptracking(true)
@@ -32,7 +37,7 @@ print(type(trainset))
 print(trainset:size())
 
 local AE = require 'model'
-AE:createAutoencoder(trainset)
+AE:createAutoencoder(trainset, SPARSITY)
 local model = AE.autoencoder
 
 if cuda then
@@ -122,7 +127,6 @@ train = function()
 end
 
 -- saving model
-local path = require 'paths'
 modelName = '/unsup_mnist.net'
 filename = path.cwd() .. modelName
 
@@ -164,8 +168,6 @@ if itorch then
 else
   print('run in itorch for visualization')
 end
-
-print(path.cwd())
 
 image.save(path.cwd() .. '/filters_dec.jpg', dd)
 image.save(path.cwd() .. '/filters_enc.jpg', de)
