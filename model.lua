@@ -17,6 +17,9 @@ function AE:createAutoencoder(X, K)
   self.decoder:add(nn.Sigmoid(true))
   self.decoder:add(nn.View(X:size(2), X:size(3)))
 
+  self.decoder:get(1).weight = self.encoder:get(2).weight:t()
+  self.decoder:get(1).gradWeight = self.encoder:get(2).gradWeight:t()
+
   self.autoencoder = nn.Sequential()
   self.autoencoder:add(self.encoder)
   self.autoencoder:add(self.decoder)
