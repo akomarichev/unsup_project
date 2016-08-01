@@ -5,10 +5,6 @@ local cuda = pcall(require, 'cutorch')
 local mnist = require 'mnist'
 local path = require 'paths'
 
-print(path.cwd())
-
-SPARSITY = 25
-
 print('Setting up')
 torch.setheaptracking(true)
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -17,6 +13,12 @@ if cuda then
   require 'cunn'
   cutorch.manualSeed(torch.random())
 end
+
+local cmd = torch.CmdLine()
+cmd:option('-learningRate', 0.1, 'Learning rate')
+cmd:option('-sparsity', 25, 'K-sparsity')
+cmd:option('-epochs', 10, 'Training epochs')
+local opt = cmd:parse(arg)
 
 local testset = mnist.testdataset().data:float():div(255)
 
@@ -37,7 +39,7 @@ print(type(trainset))
 print(trainset:size())
 
 local AE = require 'model'
-AE:createAutoencoder(trainset, SPARSITY)
+AE:createAutoencoder(trainset, opt.sparsity)
 local model = AE.autoencoder
 
 if cuda then
@@ -51,7 +53,7 @@ if cuda then
 end
 
 local sgd_params = {
-  learningRate = 1e-1
+  learningRate = opt.learningRate
 }
 
 theta, dl_dx = model:getParameters()
@@ -105,13 +107,11 @@ eval = function(batch_size)
   return l / count
 end
 
-max_iters = 5
-
 train = function()
   local last_error = 0
   local increasing = 0
   local threshold = 1
-  for i = 1, max_iters do
+  for i = 1, opt.epochs do
     local loss = step()
     print(string.format('Epoch: %d current loss: %4f', i, loss))
     local error = eval()
