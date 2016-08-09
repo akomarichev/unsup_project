@@ -13,7 +13,7 @@ function AE:createAutoencoder(X, K)
   self.encoder:add(nn.Ksparse(K))
 
   self.decoder = nn.Sequential()
-  self.decoder:add(nn.Linear(featureSize, featureSize))
+  self.decoder:add(nn.Linear(featureSize, featureSize)) 
   self.decoder:add(nn.Sigmoid(true))
   self.decoder:add(nn.View(X:size(2), X:size(3)))
 
