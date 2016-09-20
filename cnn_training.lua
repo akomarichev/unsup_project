@@ -8,7 +8,7 @@ local cnn = require 'cnn_model'
 
 print('Setting up')
 torch.setheaptracking(true)
--- torch.setdefaulttensortype('torch.FloatTensor')
+torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(1)
 if cuda then
   require 'cunn'
@@ -37,6 +37,9 @@ local Ntrain = trainset:size(1)
 
 if cuda then
   trainset = trainset:cuda()
+  y_test = y_test:cuda()
+  y_train = y_train:cuda()
+  y_valid = y_valid:cuda()
   validationset = validationset:cuda()
   testset = testset:cuda()
 end
@@ -123,7 +126,11 @@ eval = function(dataset, targets, batch_size)
 
   for i = 1, dataset:size(1), batch_size do
     x = dataset:narrow(1, i, batch_size)
-    y = targets:narrow(1, i, batch_size):long()
+    if cuda then
+      y = targets:narrow(1, i, batch_size):cuda()
+    else
+      y = targets:narrow(1, i, batch_size):long()
+    end
     local pred = model:forward(x)
     local _, indices = torch.max(pred, 2)
     indices:add(-1)
