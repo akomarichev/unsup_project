@@ -126,10 +126,11 @@ eval = function(dataset, targets, batch_size)
 
   for i = 1, dataset:size(1), batch_size do
     x = dataset:narrow(1, i, batch_size)
+    y = targets:narrow(1, i, batch_size)
     if cuda then
-      y = targets:narrow(1, i, batch_size):cuda()
+      y:cuda()
     else
-      y = targets:narrow(1, i, batch_size):long()
+      y:long()
     end
     local pred = model:forward(x)
     local _, indices = torch.max(pred, 2)
