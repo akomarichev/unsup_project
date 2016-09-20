@@ -14,6 +14,9 @@ if cuda then
   cutorch.manualSeed(torch.random())
 end
 
+print(cuda)
+cuda = false
+
 local cmd = torch.CmdLine()
 cmd:option('-learningRate', 0.001, 'Learning rate')
 cmd:option('-sparsity', 4, 'K-sparsity')
