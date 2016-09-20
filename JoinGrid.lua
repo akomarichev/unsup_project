@@ -30,12 +30,7 @@ end
 
 function JoinGrid:updateGradInput(input, gradOutput)
 
-   for i=1,#input do
-      if self.gradInput[i] == nil then
-         self.gradInput[i] = input[i].new()
-      end
-      self.gradInput[i]:resizeAs(input[i])
-   end
+   self.gradInput:resize(#input, input[1]:size(1), self.patch_size, self.patch_size)
 
    local currentOutput= {}
    local patchNumber = 1
@@ -43,7 +38,7 @@ function JoinGrid:updateGradInput(input, gradOutput)
      for y = 1, self.numberOfPatches do
        local currentOutput = input[patchNumber]
        local currentGradInput = gradOutput[{ {}, {(x-1) * self.patch_size + 1, x * self.patch_size}, {(y-1) * self.patch_size + 1, y * self.patch_size} }]
-       self.gradInput[i]:copy(currentGradInput)
+       self.gradInput[patchNumber]:copy(currentGradInput)
        patchNumber = patchNumber + 1
      end
    end
