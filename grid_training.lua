@@ -7,15 +7,12 @@ local path = require 'paths'
 
 print('Setting up')
 torch.setheaptracking(true)
-torch.setdefaulttensortype('torch.DoubleTensor')
+torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(1)
 if cuda then
   require 'cunn'
   cutorch.manualSeed(torch.random())
 end
-
-print(cuda)
-cuda = false
 
 local cmd = torch.CmdLine()
 cmd:option('-learningRate', 0.001, 'Learning rate')

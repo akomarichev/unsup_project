@@ -9,7 +9,7 @@ function SplitGrid:__init(patch_size, numberOfPatches)
 end
 
 function SplitGrid:updateOutput(input)
-  local currentOutput = torch.Tensor(self.numberOfPatches*self.numberOfPatches, input:size(1), self.patch_size, self.patch_size)
+  local currentOutput = input.new(self.numberOfPatches*self.numberOfPatches, input:size(1), self.patch_size, self.patch_size)
   local patchNumber = 1
   
    for x = 1, self.numberOfPatches do
