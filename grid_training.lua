@@ -7,7 +7,7 @@ local path = require 'paths'
 
 print('Setting up')
 torch.setheaptracking(true)
--- torch.setdefaulttensortype('torch.FloatTensor')
+torch.setdefaulttensortype('torch.DoubleTensor')
 torch.manualSeed(1)
 if cuda then
   require 'cunn'
