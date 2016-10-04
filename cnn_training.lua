@@ -8,7 +8,7 @@ local cnn = require 'cnn_model'
 
 print('Setting up')
 torch.setheaptracking(true)
-torch.setdefaulttensortype('torch.FloatTensor')
+-- torch.setdefaulttensortype('torch.FloatTensor')
 torch.manualSeed(1)
 if cuda then
   require 'cunn'
@@ -23,13 +23,16 @@ cmd:option('-patch_size', 14, 'Patch size')
 local opt = cmd:parse(arg)
 
 local testset = mnist.testdataset().data:double():div(255)
-local y_test = mnist.testdataset().label
+local y_test = mnist.testdataset().label:long()
 
-local trainset = mnist.traindataset().data[{{1, 50000}}]:double():div(255)
-local y_train = mnist.traindataset().label[{{1, 50000}}]:add(1)
+local trainset = mnist.traindataset().data:double():div(255)
+local y_train = mnist.traindataset().label:add(1):long()
 
-local validationset = mnist.traindataset().data[{{50001, 60000}}]:double():div(255)
-local y_valid = mnist.traindataset().label[{{50001, 60000}}]
+-- local trainset = mnist.traindataset().data[{{1, 50000}}]:double():div(255)
+-- local y_train = mnist.traindataset().label[{{1, 50000}}]:add(1):long()
+
+-- local validationset = mnist.traindataset().data[{{50001, 60000}}]:double():div(255)
+-- local y_valid = mnist.traindataset().label[{{50001, 60000}}]:long()
 
 local Ntrain = trainset:size(1)
 -- local Ntest = testset:size(1)
@@ -63,7 +66,26 @@ for i = 1, #ksparse_nodes do
   ksparse_nodes[i].k = ksparse_nodes[i].k * 3
 end
 
+local featureSize = trainset:size(2) * trainset:size(2)
+local numberOfPatches = math.floor(trainset:size(2) / opt.patch_size)
+
+autoenc = nn.Sequential()
+autoenc:add(autoencoder:get(1))
+dec = nn.ParallelTable()
+for i = 1, numberOfPatches * numberOfPatches do
+  branch = nn.Sequential()
+  branch:add(nn.View(-1, opt.patch_size, opt.patch_size))
+  dec:add(branch)
+end
+autoenc:add(dec)
+autoenc:add(nn.JoinGrid(opt.patch_size, numberOfPatches))
+
+-- trainset = autoenc:forward(trainset)
+-- print(#trainset)
+-- print('trainse output size: ' .. trainset:size())
 model = cnn_model(trainset, autoencoder:get(1), opt.patch_size)
+-- print(model:forward(trainset))
+-- print(model)
 -- print(autoencoder)
 -- print(model)
 
@@ -149,7 +171,7 @@ train = function()
   for i = 1, opt.epochs do
     local loss = step()
     print(string.format('Epoch: %d current loss: %4f', i, loss))
-    local accuracy = eval(validationset, y_valid)
+    local accuracy = eval(testset, y_test)
     print(string.format('Error on the validation set: %4f', accuracy))
     if accuracy < last_accuracy then
       if decreasing > threshold then break end

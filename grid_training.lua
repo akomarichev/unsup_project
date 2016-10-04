@@ -24,13 +24,13 @@ local opt = cmd:parse(arg)
 
 local testset = mnist.testdataset().data:double():div(255)
 
-local trainset = mnist.traindataset().data[{{1, 50000}}]:double():div(255)
+local trainset = mnist.traindataset().data:double():div(255)
 
-local validationset = mnist.traindataset().data[{{50001, 60000}}]:double():div(255)
+-- local validationset = mnist.traindataset().data[{{50001, 60000}}]:double():div(255)
 
 local Ntrain = trainset:size(1)
 local Ntest = testset:size(1)
-local Nvalid = validationset:size(1)
+-- local Nvalid = validationset:size(1)
 
 if cuda then
   trainset = trainset:cuda()
@@ -40,7 +40,7 @@ end
 print(type(trainset))
 print(trainset:size())
 
-local AE = require 'grid_3_layers'
+local AE = require 'grid_model'
 AE:createAutoencoder(trainset, opt.sparsity, opt.patch_size)
 local model = AE.autoencoder
 
@@ -97,8 +97,8 @@ step = function(batch_size)
   end
 
   abs_mean_gradient_l1[#abs_mean_gradient_l1 + 1] = torch.mean(torch.abs(gradWeights[1]))
-  abs_mean_gradient_l2[#abs_mean_gradient_l2 + 1] = torch.mean(torch.abs(gradWeights[9]))
-  abs_mean_gradient_l3[#abs_mean_gradient_l3 + 1] = torch.mean(torch.abs(gradWeights[17]))
+  -- abs_mean_gradient_l2[#abs_mean_gradient_l2 + 1] = torch.mean(torch.abs(gradWeights[9]))
+  -- abs_mean_gradient_l3[#abs_mean_gradient_l3 + 1] = torch.mean(torch.abs(gradWeights[17]))
 
   -- print("layer1")
   -- print(torch.mean(torch.abs(gradWeights[1])))
@@ -128,21 +128,21 @@ step = function(batch_size)
 end
 
 
-eval = function(batch_size)
-  local count = 0
-  local l = 0
-  batch_size = batch_size or 200
-
-  for i = 1, Nvalid, batch_size do
-    x = validationset:narrow(1, i, batch_size)
-    local Xhat = model:forward(x)
-    local current_loss = criterion:forward(Xhat, x)
-    l = l + current_loss
-    count = count + 1
-  end
-
-  return l / count
-end
+-- eval = function(batch_size)
+--   local count = 0
+--   local l = 0
+--   batch_size = batch_size or 200
+--
+--   for i = 1, Nvalid, batch_size do
+--     x = validationset:narrow(1, i, batch_size)
+--     local Xhat = model:forward(x)
+--     local current_loss = criterion:forward(Xhat, x)
+--     l = l + current_loss
+--     count = count + 1
+--   end
+--
+--   return l / count
+-- end
 
 train = function()
   local last_error = 0
@@ -151,15 +151,15 @@ train = function()
   for i = 1, opt.epochs do
     local loss = step()
     print(string.format('Epoch: %d current loss: %4f', i, loss))
-    local error = eval()
-    print(string.format('Error on the validation set: %4f', error))
-    if error > last_error then
-      if increasing > threshold then break end
-      increasing = increasing + 1
-    else
-      increasing = 0
-    end
-    last_error = error
+    -- local error = eval()
+    -- print(string.format('Error on the validation set: %4f', error))
+    -- if error > last_error then
+    --   if increasing > threshold then break end
+    --   increasing = increasing + 1
+    -- else
+    --   increasing = 0
+    -- end
+    -- last_error = error
   end
 end
 
@@ -187,22 +187,22 @@ local numberOfPatches = math.floor(trainset:size(2) / opt.patch_size)
 
 for i = 1, numberOfPatches * numberOfPatches do
   eweight = model:get(1):get(2):get(i):get(2).weight
-  dweight = model:get(1):get(5):get(i):get(2).weight
-  cweight = model:get(1):get(8):get(i):get(2).weight
+  -- dweight = model:get(1):get(5):get(i):get(2).weight
+  -- cweight = model:get(1):get(8):get(i):get(2).weight
   -- dweight = model:get(2):get(1):get(i):get(1).weight
   -- dweight = dweight:transpose(1,2):unfold(2, opt.patch_size, opt.patch_size)
-  dweight = dweight:unfold(2, opt.patch_size, opt.patch_size)
+  -- dweight = dweight:unfold(2, opt.patch_size, opt.patch_size)
   eweight = eweight:unfold(2, opt.patch_size, opt.patch_size)
-  cweight = cweight:unfold(2, opt.patch_size, opt.patch_size)
+  -- cweight = cweight:unfold(2, opt.patch_size, opt.patch_size)
 
-  ce = image.toDisplayTensor{input=cweight,
-                             padding=2,
-                             nrow=math.floor(math.sqrt(opt.patch_size * opt.patch_size)),
-                             symmetric=true}
-  dd = image.toDisplayTensor{input=dweight,
-                             padding=2,
-                             nrow=math.floor(math.sqrt(opt.patch_size * opt.patch_size)),
-                             symmetric=true}
+  -- ce = image.toDisplayTensor{input=cweight,
+  --                            padding=2,
+  --                            nrow=math.floor(math.sqrt(opt.patch_size * opt.patch_size)),
+  --                            symmetric=true}
+  -- dd = image.toDisplayTensor{input=dweight,
+  --                            padding=2,
+  --                            nrow=math.floor(math.sqrt(opt.patch_size * opt.patch_size)),
+  --                            symmetric=true}
   de = image.toDisplayTensor{input=eweight,
                              padding=2,
                              nrow=math.floor(math.sqrt(opt.patch_size * opt.patch_size)),
@@ -219,14 +219,14 @@ for i = 1, numberOfPatches * numberOfPatches do
   end
 
   image.save(path.cwd() .. '/grid_decoder/filters_enc_l1_' .. i .. '.jpg', de)
-  image.save(path.cwd() .. '/grid_encoder/filters_enc_l2_' .. i .. '.jpg', dd)
-  image.save(path.cwd() .. '/grid_layer_3/filters_enc_l3_' .. i .. '.jpg', ce)
+  -- image.save(path.cwd() .. '/grid_encoder/filters_enc_l2_' .. i .. '.jpg', dd)
+  -- image.save(path.cwd() .. '/grid_layer_3/filters_enc_l3_' .. i .. '.jpg', ce)
 end
 
 -- plotting mean absolute gradients
 local plots = {{'Mean absolute gradient layer 1', torch.linspace(1, #abs_mean_gradient_l1, #abs_mean_gradient_l1), torch.Tensor(abs_mean_gradient_l1), '-'}}
-plots[#plots + 1] = {'Mean absolute gradient layer 2', torch.linspace(1, #abs_mean_gradient_l2, #abs_mean_gradient_l2), torch.Tensor(abs_mean_gradient_l2), '-'}
-plots[#plots + 1] = {'Mean absolute gradient layer 3', torch.linspace(1, #abs_mean_gradient_l3, #abs_mean_gradient_l3), torch.Tensor(abs_mean_gradient_l3), '-'}
+-- plots[#plots + 1] = {'Mean absolute gradient layer 2', torch.linspace(1, #abs_mean_gradient_l2, #abs_mean_gradient_l2), torch.Tensor(abs_mean_gradient_l2), '-'}
+-- plots[#plots + 1] = {'Mean absolute gradient layer 3', torch.linspace(1, #abs_mean_gradient_l3, #abs_mean_gradient_l3), torch.Tensor(abs_mean_gradient_l3), '-'}
 
 gnuplot.pngfigure(path.cwd() .. '/plots/MeanAbsGradientsl.png')
 gnuplot.plot(table.unpack(plots))
