@@ -11,7 +11,7 @@ end
 function SplitGrid:updateOutput(input)
   local currentOutput = input.new(self.numberOfPatches*self.numberOfPatches, input:size(1), self.patch_size, self.patch_size)
   local patchNumber = 1
-  
+
    for x = 1, self.numberOfPatches do
      for y = 1, self.numberOfPatches do
        currentOutput[patchNumber] = input[{ {}, {(x-1) * self.patch_size + 1, x * self.patch_size}, {(y-1) * self.patch_size + 1, y * self.patch_size} }]

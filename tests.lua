@@ -69,10 +69,29 @@ end
 --   mytester:assertlt(err, precision, 'error on state')
 -- end
 
-function nntest.GridModel()
-  local AE = require 'grid_model'
+-- function nntest.GridModel()
+--   local AE = require 'grid_model'
+--   AE:createAutoencoder(trainset, K, patch_size)
+--   local model = AE.autoencoder
+--
+--   local err = jac.testJacobian(model, trainset)
+--   mytester:assertlt(err, precision, 'error on state')
+-- end
+
+-- function nntest.GridDeepModel()
+--   local AE = require 'grid_deep_model'
+--   AE:createAutoencoder(trainset, K, patch_size)
+--   local model = AE.autoencoder
+--
+--   local err = jac.testJacobian(model, trainset)
+--   mytester:assertlt(err, precision, 'error on state')
+-- end
+
+function nntest.GridDeepModel()
+  local AE = require 'grid_3_layers'
   AE:createAutoencoder(trainset, K, patch_size)
   local model = AE.autoencoder
+  -- print(model)
 
   local err = jac.testJacobian(model, trainset)
   mytester:assertlt(err, precision, 'error on state')
